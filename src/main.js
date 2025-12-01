@@ -3,13 +3,14 @@ import { createGallery, clearGallery, showLoader, hideLoader, showLoadMoreButton
 import iziToast from 'izitoast';
 import 'izitoast/dist/css/iziToast.min.css';
 
-
 const form = document.querySelector('.form');
 const loadMore = document.querySelector('.btn-load');
+
 let page = 1;
+let currentQuery = ''; 
+let totalHits = 0; 
 
-
-form.addEventListener('submit', event => {
+form.addEventListener('submit', async event => {
   event.preventDefault();
 
   const searchInput = form.elements['search-text'];
@@ -27,65 +28,117 @@ form.addEventListener('submit', event => {
     return;
   }
 
+  page = 1;
+  currentQuery = query;
+  
   clearGallery();
   showLoader(); 
-hideLoadMoreButton();
+  hideLoadMoreButton();
 
-  getImagesByQuery(query, page)
-    .then(data => {
-      hideLoader(); 
+  try {
+    const data = await getImagesByQuery(currentQuery, page);
+    hideLoader();
 
-      if (data.hits.length === 0) {
-        iziToast.error({
-          title: 'No Results',
-          message: 'Sorry, there are no images matching your search query. Please try again!',
-          position: 'topRight',
-          backgroundColor: '#EF4040',
-          messageColor: '#fff',
-          titleColor: '#fff',
-        });
-        return;
-      }
-
-
-      createGallery(data.hits);
-
-      iziToast.success({
-        title: 'Success',
-        message: `Found ${data.totalHits} images!`,
-        position: 'topRight',
-        backgroundColor: '#59A10D',
-        messageColor: '#fff',
-        titleColor: '#fff',
-        timeout: 3000,
-      });
-      showLoadMoreButton();
-loadMore.addEventListener('click', 
-async function addGalleryItems() {
-  page += 1;
-  getImagesByQuery(query, page);
-
- 
-  return createGallery(data.hits);
-});
-
-
-
-    })
-    .catch(error => {
-      hideLoader();
-
+    if (data.hits.length === 0) {
       iziToast.error({
-        title: 'Error',
-        message: 'Something went wrong. Please try again later.',
+        title: 'No Results',
+        message: 'Sorry, there are no images matching your search query. Please try again!',
         position: 'topRight',
         backgroundColor: '#EF4040',
         messageColor: '#fff',
         titleColor: '#fff',
       });
+      return;
+    }
 
-      console.error('Error:', error);
+    totalHits = data.totalHits;
+    await createGallery(data.hits);
+
+    iziToast.success({
+      title: 'Success',
+      message: `Hooray! We found ${totalHits} images!`,
+      position: 'topRight',
+      backgroundColor: '#59A10D',
+      messageColor: '#fff',
+      titleColor: '#fff',
+      timeout: 3000,
     });
 
+    if (page * 15 < totalHits) {
+      showLoadMoreButton();
+    }
+
+  } catch (error) {
+    hideLoader();
+
+    iziToast.error({
+      title: 'Error',
+      message: 'Something went wrong. Please try again later.',
+      position: 'topRight',
+      backgroundColor: '#EF4040',
+      messageColor: '#fff',
+      titleColor: '#fff',
+    });
+
+    console.error('Error:', error);
+  }
+
   searchInput.value = '';
+});
+
+loadMore.addEventListener('click', async () => {
+  page += 1;
+  
+  showLoader();
+  hideLoadMoreButton();
+  
+  try {
+    const data = await getImagesByQuery(currentQuery, page);
+    hideLoader();
+    
+    await createGallery(data.hits);
+
+    if (page * 15 >= totalHits) {
+      hideLoadMoreButton();
+      
+      iziToast.info({
+        title: 'End of results',
+        message: "We're sorry, but you've reached the end of search results.",
+        position: 'topRight',
+        backgroundColor: '#4A90E2',
+        messageColor: '#fff',
+        titleColor: '#fff',
+      });
+    } else {
+      showLoadMoreButton();
+    }
+
+    setTimeout(() => {
+      const galleryItem = document.querySelector('.gallery-item');
+      
+      if (galleryItem) {
+        const { height: cardHeight } = galleryItem.getBoundingClientRect();
+        
+        window.scrollBy({
+          top: cardHeight * 2,
+          behavior: 'smooth',
+        });
+      }
+    }, 200);
+
+  } catch (error) {
+    hideLoader();
+    showLoadMoreButton();
+    
+    iziToast.error({
+      title: 'Error',
+      message: 'Failed to load more images. Please try again.',
+      position: 'topRight',
+      backgroundColor: '#EF4040',
+      messageColor: '#fff',
+      titleColor: '#fff',
+    });
+
+    console.error('Error loading more:', error);
+  }
 });
