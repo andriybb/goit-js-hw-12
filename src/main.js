@@ -6,6 +6,7 @@ import 'izitoast/dist/css/iziToast.min.css';
 const form = document.querySelector('.form');
 const loadMore = document.querySelector('.btn-load');
 
+
 let page = 1;
 let currentQuery = ''; 
 let totalHits = 0; 
@@ -31,13 +32,13 @@ form.addEventListener('submit', async event => {
   page = 1;
   currentQuery = query;
   
-  clearGallery();
-  showLoader(); 
-  hideLoadMoreButton();
+  await clearGallery();
+  await showLoader(); 
+  await hideLoadMoreButton();
 
   try {
     const data = await getImagesByQuery(currentQuery, page);
-    hideLoader();
+    await hideLoader();
 
     if (data.hits.length === 0) {
       iziToast.error({
@@ -65,11 +66,11 @@ form.addEventListener('submit', async event => {
     });
 
     if (page * 15 < totalHits) {
-      showLoadMoreButton();
+      await showLoadMoreButton();
     }
 
   } catch (error) {
-    hideLoader();
+    await hideLoader();
 
     iziToast.error({
       title: 'Error',
@@ -89,17 +90,17 @@ form.addEventListener('submit', async event => {
 loadMore.addEventListener('click', async () => {
   page += 1;
   
-  showLoader();
-  hideLoadMoreButton();
+  await showLoader();
+  await hideLoadMoreButton();
   
   try {
     const data = await getImagesByQuery(currentQuery, page);
-    hideLoader();
+    await hideLoader();
     
     await createGallery(data.hits);
 
     if (page * 15 >= totalHits) {
-      hideLoadMoreButton();
+      await hideLoadMoreButton();
       
       iziToast.info({
         title: 'End of results',
@@ -110,7 +111,7 @@ loadMore.addEventListener('click', async () => {
         titleColor: '#fff',
       });
     } else {
-      showLoadMoreButton();
+      await showLoadMoreButton();
     }
 
     setTimeout(() => {
@@ -124,11 +125,11 @@ loadMore.addEventListener('click', async () => {
           behavior: 'smooth',
         });
       }
-    }, 200);
+    }, 250);
 
   } catch (error) {
-    hideLoader();
-    showLoadMoreButton();
+    await hideLoader();
+    await showLoadMoreButton();
     
     iziToast.error({
       title: 'Error',
